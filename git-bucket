@@ -1,0 +1,53 @@
+# Written by Bogdan Vitoc, but heavily inspired from Eli Fatsi
+# Original article: https://viget.com/extend/create-a-github-repo-from-the-command-line
+
+# Creates private BitBucket repo, adds it as a remote and pushes to it
+# Optionally, pass --public to make repository public
+
+
+public=$1
+is_private="true"
+fork_policy="no_public_forks"
+
+if [ "$public" = "--public" ]; then
+	is_private="false"
+	fork_policy="allow_forks"
+fi
+
+dir_name=`basename $(pwd)`
+
+echo "Repo name (hit enter to use '$dir_name')?"
+read repo_name
+
+if [ "$repo_name" = "" ]; then
+  repo_name=$dir_name
+fi
+
+repo_name_lower=$(echo "$repo_name" | tr '[:upper:]' '[:lower:]')
+
+username=`git config github.user`
+if [ "$username" = "" ]; then
+  echo "Could not find username, run 'git config --global github.user <username>'"
+  invalid_credentials=1
+fi
+
+password=`git config bitbucket.password`
+if [ "$password" = "" ]; then
+  echo "Could not find password, run 'git config --global bitbucket.password <password>'"
+  invalid_credentials=1
+fi
+
+if [ "$invalid_credentials" == "1" ]; then
+  exit 1
+fi
+
+echo -n "Creating Github repository '$repo_name' ..."
+curl -X POST -v -u "$username:$password" -H "Content-Type: application/json" \
+https://api.bitbucket.org/2.0/repositories/$username/$repo_name_lower \
+-d '{"scm": "git", "is_private": "'"$is_private"'", "fork_policy": "'"$fork_policy"'", "name": "'"$repo_name"'"}'
+echo " done."
+
+echo -n "Pushing local code to remote ..."
+git remote add bucket git@bitbucket.org:$username/"$repo_name_lower".git > /dev/null 2>&1
+git push -u bucket master > /dev/null 2>&1
+echo " done."

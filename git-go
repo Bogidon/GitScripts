@@ -1,0 +1,15 @@
+# Written by Bogdan Vitoc
+
+# Initializes git repo, stages all files and commits
+
+git init
+git add -A :/
+
+echo "Repo name (hit enter to use 'Initial commit')?"
+read repo_name
+
+if [ "$commit_message" = "" ]; then
+  commit_message="\"Initial Commit\""
+fi
+
+git commit -m "$commit_message"
