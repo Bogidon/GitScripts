@@ -5,7 +5,7 @@
 git init
 git add -A :/
 
-echo "Repo name (hit enter to use 'Initial commit')?"
+echo "Commit message (hit enter to use 'Initial commit')?"
 read repo_name
 
 if [ "$commit_message" = "" ]; then
