@@ -1,0 +1,72 @@
+# Confirmation
+
+echo "This command will delete your git repository. Continue? (yes/no)"
+read should_continue
+
+if [ "$should_continue" != "yes" ]; then
+	echo "ABORTing"
+	exit 1
+fi
+
+# Check if subfolders are git repositories
+
+ABORT=0
+COUNT=0
+declare -a REMOTES
+for dir in ./*
+do
+	dir_name=`basename $dir`
+	printf "\n$dir_name:\n"
+
+    if [ ! -d "$dir/.git" ]; then
+    	echo "$dir is not a git repo. ABORTing"
+	 	exit 1
+	else
+		GIT_COMMAND="git -C $dir"
+		LOCAL=$($GIT_COMMAND rev-parse @)
+		REMOTE=$($GIT_COMMAND rev-parse @{u})
+		BASE=$($GIT_COMMAND merge-base @ @{u})
+
+		if [ "$LOCAL" = "$REMOTE" ]; then
+		    echo "Up-to-date"
+		    REMOTES[$COUNT]=$($GIT_COMMAND ls-remote --get-url)
+
+		elif [ "$LOCAL" = "$BASE" ]; then
+		    echo "Need to pull"
+		    ABORT=1
+		elif [ "$REMOTE" = "$BASE" ]; then
+		    echo "Need to push"
+		    ABORT=1
+		else
+		    echo "Diverged"
+		    ABORT=1
+		fi
+	fi
+
+	COUNT=($COUNT+1)
+done
+
+printf "\n\n"
+
+# Check if abort needed
+
+if [ $ABORT = 1 ]; then
+	printf "One or more git repos not up-to-date with remote.\nABORTing.\n"
+	exit 1
+fi
+
+# Delete current .git folder
+rm -rf "./.git"
+
+# Remove subfolders
+for dir in ./*
+do
+	rm -rf "$dir"
+done
+
+# Init git repo
+git init
+for REMOTE in "${REMOTES[@]}"
+do
+	git submodule add "$REMOTE"
+done
